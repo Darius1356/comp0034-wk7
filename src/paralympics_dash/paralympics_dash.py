@@ -1,11 +1,17 @@
 # Version after the final activity in week 6
 from dash import Dash, html, dcc
 import dash_bootstrap_components as dbc
+import requests
 
 # Add an import to import the line_chart function
-from figures import line_chart
+from figures import line_chart, bar_gender, scatter_geo
+
 # Create the Plotly Express line chart object, e.g. to show number of sports
 line = line_chart("sports")
+
+bar = bar_gender("summer")
+# Create the scatter map
+map = scatter_geo()
 
 # Variable that contains the external_stylesheet to use, in this case Bootstrap styling from dash bootstrap
 # components (dbc)
@@ -18,7 +24,57 @@ meta_tags = [
 
 # Pass the stylesheet variable to the Dash app constructor
 app = Dash(__name__, external_stylesheets=external_stylesheets, meta_tags=meta_tags)
+url = app.get_asset_url('my_asset.png')
 
+def create_card(event_id):
+    """
+    Generate a card for the event specified by event_id.
+
+    Uses the REST API route.
+
+    Args:
+        event_id:
+
+    Returns:
+        card: dash boostrap components card for the event
+    """
+    # Use python requests to access your REST API on your localhost
+    # Make sure you run the REST APP first and check your port number if you changed it from the default 5000
+    url = f"http://127.0.0.1:5000/events/{event_id}"
+    event_response = requests.get(url)
+    ev = event_response.json()
+
+    # Variables for the card contents
+    logo = f'logos/{ev['year']}_{ev['host']}.jpg'
+    dates = f'{ev['start']} to {ev['end']}'
+    host = f'{ev['host']} {ev['year']}'
+    highlights = f'Highlights: {ev['highlights']}'
+    participants = f'{ev['participants']} athletes'
+    events = f'{ev['events']} events'
+    countries = f'{ev['countries']} countries'
+
+    card = dbc.Card([
+        dbc.CardBody(
+            [
+                html.H4([html.Img(src=app.get_asset_url(logo), width=35, className="me-1"),
+                         host]),
+                html.Br(),
+                html.H6(dates, className="card-subtitle"),
+                html.P(highlights, className="card-text"),
+                html.P(participants, className="card-text"),
+                html.P(events, className="card-text"),
+                html.P(countries, className="card-text"),
+            ]
+        ),
+    ],
+        style={"width": "18rem"},
+    )
+    return card
+
+# Set to display event 12, this will be changed next week using a callback
+card = create_card(12)
+
+"""
 # Variables that define the three rows and their contents
 card = dbc.Card(
     [
@@ -50,6 +106,7 @@ card = dbc.Card(
     ],
     style={"width": "18rem"},
 )
+"""
 
 dropdown = dbc.Select(
     id="type-dropdown",  # id uniquely identifies the element, will be needed later
@@ -93,13 +150,13 @@ row_three = dbc.Row([
         dcc.Graph(id="line", figure=line),
     ], width=4),
     dbc.Col(children=[
-        html.Img(src=app.get_asset_url('bar-chart-placeholder.png'), className="img-fluid"),
+        dcc.Graph(id="bar", figure=bar)
     ], width=4),
 ], align="start")
 
 row_four = dbc.Row([
     dbc.Col(children=[
-        html.Img(src=app.get_asset_url('map-placeholder.png'), className="img-fluid"),
+        dcc.Graph(id="map", figure=map),
     ], width=8),
     dbc.Col(children=[
         card,
